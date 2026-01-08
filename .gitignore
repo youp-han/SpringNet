@@ -1,0 +1,13 @@
+/packages
+/.vs
+/SpringNet.Data/bin
+/SpringNet.Data/obj
+/SpringNet.Domain/obj
+/SpringNet.Domain/bin
+/SpringNet.Infrastructure/bin
+/SpringNet.Infrastructure/obj
+/SpringNet.Service/obj
+/SpringNet.Service/bin
+/SpringNet.Web/obj
+/SpringNet.Web/bin
+/.claude
