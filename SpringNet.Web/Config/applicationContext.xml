@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<objects xmlns="http://www.springframework.net"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.springframework.net 
+		http://www.springframework.net/xsd/spring/spring-objects.xsd">
+
+	<object id="testService" type="System.String">
+		<constructor-arg value="Spring Loaded" />
+
+	</object>
+	<object id="homeController"
+        type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
+		<property name="TestService" ref="testService" />
+	</object>
+
+
+</objects>
+  <!--<constructor-arg>
+	<list>
+	  <value>~/Config/dataAccess.xml</value>
+	  <value>~/Config/services.xml</value>
+	  <value>~/Config/controllers.xml</value>
+	</list>
+  </constructor-arg>-->
