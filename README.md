@@ -65,7 +65,7 @@
    - SQLite 사용 시: 기본 설정 그대로 사용
 
 4. **학습 시작**
-   - `docs/00-overview.md` 파일부터 시작
+   - `docs/tutorial/00-overview.md` 파일부터 시작
    - 순서대로 01, 02, 03... 진행
 
 ## 📚 학습 로드맵
@@ -75,55 +75,55 @@
 <details>
 <summary><b>Phase 1: 기초 개념 (1-3단계)</b> ⭐</summary>
 
-- [01. Spring.NET 기본 개념](docs/01-springnet-basics.md) - IoC, DI 이해
-- [02. 의존성 주입 심화](docs/02-dependency-injection.md) - 생성자/프로퍼티 주입
-- [03. NHibernate 설정](docs/03-nhibernate-setup.md) - ORM 기본 설정
+- [01. Spring.NET 기본 개념](docs/tutorial/01-springnet-basics.md) - IoC, DI 이해
+- [02. 의존성 주입 심화](docs/tutorial/02-dependency-injection.md) - 생성자/프로퍼티 주입
+- [03. NHibernate 설정](docs/tutorial/03-nhibernate-setup.md) - ORM 기본 설정
 
 </details>
 
 <details>
 <summary><b>Phase 2: 게시판 시스템 (4-7단계)</b> ⭐⭐</summary>
 
-- [04. 도메인 모델 설계](docs/04-board-part1-domain.md) - Entity 설계 및 매핑
-- [05. Repository 패턴](docs/05-board-part2-repository.md) - 데이터 액세스 계층
-- [06. Service Layer](docs/06-board-part3-service.md) - 비즈니스 로직 분리
-- [07. MVC 컨트롤러 & 뷰](docs/07-board-part4-mvc.md) - 웹 프레젠테이션
+- [04. 도메인 모델 설계](docs/tutorial/04-board-part1-domain.md) - Entity 설계 및 매핑
+- [05. Repository 패턴](docs/tutorial/05-board-part2-repository.md) - 데이터 액세스 계층
+- [06. Service Layer](docs/tutorial/06-board-part3-service.md) - 비즈니스 로직 분리
+- [07. MVC 컨트롤러 & 뷰](docs/tutorial/07-board-part4-mvc.md) - 웹 프레젠테이션
 
 </details>
 
 <details>
 <summary><b>Phase 3: 사용자 관리 (8-9단계)</b> ⭐⭐⭐</summary>
 
-- [08. 인증 (Authentication)](docs/08-user-part1-authentication.md) - 회원가입, 로그인
-- [09. 인가 (Authorization)](docs/09-user-part2-authorization.md) - 권한 관리
+- [08. 인증 (Authentication)](docs/tutorial/08-user-part1-authentication.md) - 회원가입, 로그인
+- [09. 인가 (Authorization)](docs/tutorial/09-user-part2-authorization.md) - 권한 관리
 
 </details>
 
 <details>
 <summary><b>Phase 4: 쇼핑몰 시스템 (10-12단계)</b> ⭐⭐⭐⭐</summary>
 
-- [10. 상품 관리](docs/10-shopping-part1-products.md) - 카테고리, 상품 CRUD
-- [11. 장바구니](docs/11-shopping-part2-cart.md) - 장바구니 기능
-- [12. 주문 처리](docs/12-shopping-part3-order.md) - 주문 및 결제
+- [10. 상품 관리](docs/tutorial/10-shopping-part1-products.md) - 카테고리, 상품 CRUD
+- [11. 장바구니](docs/tutorial/11-shopping-part2-cart.md) - 장바구니 기능
+- [12. 주문 처리](docs/tutorial/12-shopping-part3-order.md) - 주문 및 결제
 
 </details>
 
 <details>
 <summary><b>Phase 5: 고급 주제 (13-14단계)</b> ⭐⭐⭐⭐</summary>
 
-- [13. 트랜잭션 관리](docs/13-transaction-management.md) - ACID, 격리 수준
-- [14. 베스트 프랙티스](docs/14-best-practices.md) - 보안, 성능 최적화
+- [13. 트랜잭션 관리](docs/tutorial/13-transaction-management.md) - ACID, 격리 수준
+- [14. 베스트 프랙티스](docs/tutorial/14-best-practices.md) - 보안, 성능 최적화
 
 </details>
 
 <details open>
 <summary><b>Phase 6: 실무 심화 (15-19단계)</b> ⭐⭐⭐⭐⭐</summary>
 
-- [15. NHibernate 고급 쿼리](docs/15-advanced-nhibernate-queries.md) - HQL, LINQ, Criteria
-- [16. Stored Procedure](docs/16-stored-procedures.md) - 프로시저 사용법
-- [17. 세션 관리](docs/17-session-management.md) - NHibernate & Web Session
-- [18. Web API 통합](docs/18-webapi-integration.md) - RESTful API 개발
-- [19. 고급 CRUD 패턴](docs/19-advanced-crud-patterns.md) - UoW, Specification
+- [15. NHibernate 고급 쿼리](docs/tutorial/15-advanced-nhibernate-queries.md) - HQL, LINQ, Criteria
+- [16. Stored Procedure](docs/tutorial/16-stored-procedures.md) - 프로시저 사용법
+- [17. 세션 관리](docs/tutorial/17-session-management.md) - NHibernate & Web Session
+- [18. Web API 통합](docs/tutorial/18-webapi-integration.md) - RESTful API 개발
+- [19. 고급 CRUD 패턴](docs/tutorial/19-advanced-crud-patterns.md) - UoW, Specification
 
 </details>
 
@@ -132,7 +132,7 @@
 ```
 SpringNet/
 │
-├── docs/                          # 📚 학습 문서 (20개 튜토리얼)
+├── docs/tutorial/                          # 📚 학습 문서 (20개 튜토리얼)
 │   ├── 00-overview.md            # 전체 로드맵
 │   ├── 01-springnet-basics.md    # Spring.NET 기초
 │   ├── 02-dependency-injection.md
@@ -293,7 +293,7 @@ SpringNet/
 
 ## 🙏 감사의 말
 
-- [Spring.NET](http://springframework.net/) - 공식 문서 및 커뮤니티
+- [Spring.NET](http.springframework.net/) - 공식 문서 및 커뮤니티
 - [NHibernate](https://nhibernate.info/) - ORM 프레임워크
 - 모든 기여자 및 학습자 여러분
 
