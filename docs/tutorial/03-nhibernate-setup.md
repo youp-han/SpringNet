@@ -252,6 +252,10 @@ namespace SpringNet.Domain.Entities
 </hibernate-configuration>
 ```
 
+**`|DataDirectory|`란?**
+
+`|DataDirectory|`는 ASP.NET 애플리케이션에서 `App_Data` 폴더의 실제 경로로 자동 변환되는 특수한 문자열입니다. 따라서 SQLite를 사용하면 `springnet.db` 파일은 `SpringNet.Web/App_Data/` 폴더에 생성됩니다. 웹 프로젝트가 실행될 때 `SpringNet.Data` 라이브러리가 이 설정을 사용하게 됩니다.
+
 **설정 설명**:
 - `show_sql`: SQL 쿼리 출력 (디버깅용)
 - `format_sql`: SQL 포맷팅
@@ -415,21 +419,83 @@ namespace SpringNet.Data.Repositories
 }
 ```
 
-### Spring.NET 연동
+### 📢 프로젝트 설정 중간 점검
 
-`Config/applicationContext.xml`:
+지금까지 `Domain`, `Data` 프로젝트에 많은 파일을 추가했습니다. 애플리케이션이 올바르게 동작하려면, 각 프로젝트 파일(`.csproj`)을 수정하여 새 파일들을 포함하고, 일부 파일의 속성을 설정해야 합니다.
+
+#### 1. 폴더 및 파일 정리
+
+- **폴더 생성**:
+  - `SpringNet.Domain` 프로젝트에 `Entities` 폴더를 만듭니다.
+  - `SpringNet.Data` 프로젝트에 `Mappings`와 `Repositories` 폴더를 만듭니다.
+- **파일 이동**:
+  - `Product.cs` -> `SpringNet.Domain/Entities/`
+  - `Product.hbm.xml` -> `SpringNet.Data/Mappings/`
+  - `IProductRepository.cs`, `ProductRepository.cs` -> `SpringNet.Data/Repositories/`
+- **파일 삭제**: `SpringNet.Domain/Class1.cs`와 `SpringNet.Data/Class1.cs`는 이제 필요 없으니 삭제합니다.
+
+#### 2. `SpringNet.Domain.csproj` 업데이트
+
+`ItemGroup`에 `Product.cs`를 추가합니다.
 
 ```xml
-<?xml version="1.0" encoding="utf-8" ?>
-<objects xmlns="http://www.springframework.net">
+<ItemGroup>
+  <Compile Include="Entities\Product.cs" />
+  <Compile Include="Properties\AssemblyInfo.cs" />
+</ItemGroup>
+```
 
-    <!-- SessionFactory -->
+#### 3. `SpringNet.Data.csproj` 업데이트
+
+`NHibernateHelper`, Repository 파일, 매핑 XML, 설정 파일을 모두 포함하도록 수정합니다.
+
+```xml
+  <!-- ... ItemGroup with references ... -->
+  <ItemGroup>
+    <Compile Include="NHibernateHelper.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\IProductRepository.cs" />
+    <Compile Include="Repositories\ProductRepository.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="hibernate.cfg.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Mappings\Product.hbm.xml" />
+  </ItemGroup>
+  <!-- ... project references ... -->
+```
+
+**중요 파일 속성 요약**:
+-   **`Product.hbm.xml`**: `Build Action` -> `Embedded Resource`
+-   **`hibernate.cfg.xml`**: `Copy to Output Directory` -> `Copy if newer`
+
+이 설정들은 Visual Studio의 파일 속성 창에서도 직접 변경할 수 있습니다.
+
+---
+
+### Spring.NET 연동
+
+이제 NHibernate의 `SessionFactory`와 우리가 만든 `ProductRepository`를 Spring.NET 컨테이너에 Bean으로 등록할 차례입니다. 이렇게 하면 Spring이 객체의 생명주기를 관리하고, 필요한 곳에 의존성을 주입해 줄 수 있습니다.
+
+`Config/applicationContext.xml` 파일을 열어 다음 Bean들을 추가합니다.
+
+```xml
+    <!-- ... 이전 튜토리얼에서 추가한 Bean들 ... -->
+
+    <!-- === NHibernate 설정 추가 === -->
+
+    <!-- SessionFactory Bean -->
     <object id="sessionFactory"
             type="SpringNet.Data.NHibernateHelper, SpringNet.Data"
-            factory-method="SessionFactory">
-    </object>
+            factory-method="SessionFactory"
+            singleton="true" />
 
-    <!-- Product Repository -->
+    <!-- Product Repository Bean -->
     <object id="productRepository"
             type="SpringNet.Data.Repositories.ProductRepository, SpringNet.Data">
         <constructor-arg ref="sessionFactory" />
@@ -437,6 +503,10 @@ namespace SpringNet.Data.Repositories
 
 </objects>
 ```
+
+**설명**:
+1.  `sessionFactory`: `NHibernateHelper` 클래스의 `SessionFactory` 정적 프로퍼티를 사용하여 `ISessionFactory` 인스턴스를 생성합니다. `factory-method`를 사용하고, `singleton="true"`로 설정하여 애플리케이션 전체에서 단 하나의 인스턴스만 사용하도록 합니다.
+2.  `productRepository`: 생성자 주입을 통해 `sessionFactory` Bean을 참조(`ref`)합니다.
 
 ## 🔍 HQL (Hibernate Query Language)
 
@@ -576,7 +646,26 @@ namespace SpringNet.Service
 }
 ```
 
+#### 📢 프로젝트 파일 업데이트
+`SpringNet.Service.csproj` 파일에 `IProductService.cs`와 `ProductService.cs`를 추가합니다.
+
+```xml
+<ItemGroup>
+  <Compile Include="GreetingService.cs" />
+  <Compile Include="IGreetingService.cs" />
+  <Compile Include="Logging\CompositeLogger.cs" />
+  <Compile Include="Logging\ConsoleLogger.cs" />
+  <Compile Include="Logging\FileLogger.cs" />
+  <Compile Include="Logging\ILogger.cs" />
+  <Compile Include="IProductService.cs" />
+  <Compile Include="ProductService.cs" />
+  <Compile Include="Properties\AssemblyInfo.cs" />
+</ItemGroup>
+```
+
 ### applicationContext.xml 설정
+
+`applicationContext.xml` 파일의 `<objects>` 태그 내부에, 앞서 정의한 `productRepository`에 이어 `productService` Bean을 추가합니다.
 
 ```xml
 <!-- Product Service -->

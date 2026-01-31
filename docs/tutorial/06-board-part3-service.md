@@ -138,32 +138,21 @@ namespace SpringNet.Service
 
         public int CreateBoard(string title, string content, string author)
         {
-            // 유효성 검증
-            if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("제목은 필수입니다.");
-            if (string.IsNullOrWhiteSpace(content))
-                throw new ArgumentException("내용은 필수입니다.");
+            if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("제목은 필수입니다.");
+            if (string.IsNullOrWhiteSpace(content)) throw new ArgumentException("내용은 필수입니다.");
 
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var board = new Board
-                    {
-                        Title = title,
-                        Content = content,
-                        Author = author
-                    };
-
-                    session.Save(board);
-                    transaction.Commit();
-
+                    var board = new Board { Title = title, Content = content, Author = author };
+                    boardRepository.Add(board);
+                    tx.Commit();
                     return board.Id;
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -171,31 +160,27 @@ namespace SpringNet.Service
 
         public BoardDetailDto GetBoard(int id, bool increaseViewCount = true)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var board = session.Query<Board>()
-                        .Fetch(b => b.Replies)
-                        .FirstOrDefault(b => b.Id == id);
-
-                    if (board == null)
-                        throw new ArgumentException($"게시글 {id}를 찾을 수 없습니다.");
+                    // 댓글을 함께 가져오기 위해 Repository의 특정 메서드 사용
+                    var board = boardRepository.GetWithReplies(id);
+                    if (board == null) throw new ArgumentException($"게시글 {id}를 찾을 수 없습니다.");
 
                     if (increaseViewCount)
                     {
                         board.IncreaseViewCount();
-                        session.Update(board);
+                        // 변경된 내용을 DB에 반영하기 위해 Update 호출
+                        boardRepository.Update(board);
                     }
 
-                    transaction.Commit();
-
+                    tx.Commit();
                     return MapToBoardDetailDto(board);
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -203,14 +188,15 @@ namespace SpringNet.Service
 
         public PagedResultDto<BoardDto> GetBoards(int pageNumber, int pageSize)
         {
-            using (var session = sessionFactory.OpenSession())
+            // 읽기 전용 작업이지만, 일관된 세션 관리를 위해 트랜잭션 사용
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                var totalCount = session.Query<Board>().Count();
-                var boards = session.Query<Board>()
+                var totalCount = boardRepository.Count();
+                var boards = boardRepository.GetPaged(pageNumber, pageSize)
                     .OrderByDescending(b => b.CreatedDate)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
                     .ToList();
+
+                tx.Commit();
 
                 return new PagedResultDto<BoardDto>
                 {
@@ -225,26 +211,21 @@ namespace SpringNet.Service
 
         public void UpdateBoard(int id, string title, string content, string currentUser)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var board = session.Get<Board>(id);
-                    if (board == null)
-                        throw new ArgumentException($"게시글 {id}를 찾을 수 없습니다.");
-
-                    // 권한 확인
-                    if (board.Author != currentUser)
-                        throw new UnauthorizedAccessException("수정 권한이 없습니다.");
+                    var board = boardRepository.GetById(id);
+                    if (board == null) throw new ArgumentException($"게시글 {id}를 찾을 수 없습니다.");
+                    if (board.Author != currentUser) throw new UnauthorizedAccessException("수정 권한이 없습니다.");
 
                     board.UpdateContent(title, content);
-                    session.Update(board);
-                    transaction.Commit();
+                    boardRepository.Update(board);
+                    tx.Commit();
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -252,24 +233,20 @@ namespace SpringNet.Service
 
         public void DeleteBoard(int id, string currentUser)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var board = session.Get<Board>(id);
-                    if (board == null)
-                        throw new ArgumentException($"게시글 {id}를 찾을 수 없습니다.");
+                    var board = boardRepository.GetById(id);
+                    if (board == null) return;
+                    if (board.Author != currentUser) throw new UnauthorizedAccessException("삭제 권한이 없습니다.");
 
-                    if (board.Author != currentUser)
-                        throw new UnauthorizedAccessException("삭제 권한이 없습니다.");
-
-                    session.Delete(board);
-                    transaction.Commit();
+                    boardRepository.Delete(board.Id);
+                    tx.Commit();
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -277,9 +254,12 @@ namespace SpringNet.Service
 
         public PagedResultDto<BoardDto> SearchBoards(string keyword, int pageNumber, int pageSize)
         {
-            using (var session = sessionFactory.OpenSession())
+            // 참고: 이 로직은 Repository가 아닌 Service에 있습니다.
+            // Repository에 페이징을 포함한 검색 메서드가 없기 때문입니다.
+            // 이상적으로는 IBoardRepository에 PagedSearch(..) 같은 메서드를 추가하는 것이 좋습니다.
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                var query = session.Query<Board>()
+                var query = sessionFactory.GetCurrentSession().Query<Board>()
                     .Where(b => b.Title.Contains(keyword) || b.Content.Contains(keyword));
 
                 var totalCount = query.Count();
@@ -288,6 +268,8 @@ namespace SpringNet.Service
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToList();
+                
+                tx.Commit();
 
                 return new PagedResultDto<BoardDto>
                 {
@@ -302,30 +284,21 @@ namespace SpringNet.Service
 
         public int AddReply(int boardId, string content, string author)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var board = session.Get<Board>(boardId);
-                    if (board == null)
-                        throw new ArgumentException($"게시글 {boardId}를 찾을 수 없습니다.");
+                    var board = boardRepository.GetById(boardId);
+                    if (board == null) throw new ArgumentException($"게시글 {boardId}를 찾을 수 없습니다.");
 
-                    var reply = new Reply
-                    {
-                        Board = board,
-                        Content = content,
-                        Author = author
-                    };
-
-                    session.Save(reply);
-                    transaction.Commit();
-
+                    var reply = new Reply { Board = board, Content = content, Author = author };
+                    replyRepository.Add(reply);
+                    tx.Commit();
                     return reply.Id;
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -333,24 +306,20 @@ namespace SpringNet.Service
 
         public void DeleteReply(int replyId, string currentUser)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var transaction = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
                 try
                 {
-                    var reply = session.Get<Reply>(replyId);
-                    if (reply == null)
-                        throw new ArgumentException($"댓글 {replyId}를 찾을 수 없습니다.");
+                    var reply = replyRepository.GetById(replyId);
+                    if (reply == null) return;
+                    if (reply.Author != currentUser) throw new UnauthorizedAccessException("삭제 권한이 없습니다.");
 
-                    if (reply.Author != currentUser)
-                        throw new UnauthorizedAccessException("삭제 권한이 없습니다.");
-
-                    session.Delete(reply);
-                    transaction.Commit();
+                    replyRepository.Delete(reply);
+                    tx.Commit();
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    tx.Rollback();
                     throw;
                 }
             }
@@ -358,26 +327,20 @@ namespace SpringNet.Service
 
         public IList<BoardDto> GetRecentBoards(int count)
         {
-            using (var session = sessionFactory.OpenSession())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                var boards = session.Query<Board>()
-                    .OrderByDescending(b => b.CreatedDate)
-                    .Take(count)
-                    .ToList();
-
+                var boards = boardRepository.GetRecent(count);
+                tx.Commit();
                 return boards.Select(MapToBoardDto).ToList();
             }
         }
 
         public IList<BoardDto> GetPopularBoards(int count)
         {
-            using (var session = sessionFactory.OpenSession())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                var boards = session.Query<Board>()
-                    .OrderByDescending(b => b.ViewCount)
-                    .Take(count)
-                    .ToList();
-
+                var boards = boardRepository.GetPopular(count);
+                tx.Commit();
                 return boards.Select(MapToBoardDto).ToList();
             }
         }
@@ -428,27 +391,55 @@ namespace SpringNet.Service
 }
 ```
 
+### 📢 프로젝트 파일 업데이트
+새로운 DTO, 인터페이스, 서비스 클래스를 `SpringNet.Service.csproj`에 추가해야 합니다.
+
+1.  `SpringNet.Service` 프로젝트에 `DTOs` 폴더를 생성하고 `BoardDto.cs` 파일을 그 안으로 이동합니다.
+2.  `SpringNet.Service.csproj` 파일의 `<Compile>` 아이템 그룹을 다음과 같이 업데이트합니다.
+
+```xml
+<ItemGroup>
+  <Compile Include="BoardService.cs" />
+  <Compile Include="DTOs\BoardDto.cs" />
+  <Compile Include="GreetingService.cs" />
+  <Compile Include="IBoardService.cs" />
+  <Compile Include="IGreetingService.cs" />
+  <Compile Include="IProductService.cs" />
+  <Compile Include="Logging\CompositeLogger.cs" />
+  <Compile Include="Logging\ConsoleLogger.cs" />
+  <Compile Include="Logging\FileLogger.cs" />
+  <Compile Include="Logging\ILogger.cs" />
+  <Compile Include="ProductService.cs" />
+  <Compile Include="Properties\AssemblyInfo.cs" />
+</ItemGroup>
+```
+
 ## 💡 트랜잭션 관리
 
 ### 수동 트랜잭션
 
+`BoardService`에서 사용한 것처럼, `GetCurrentSession()`으로 현재 세션을 얻어와 트랜잭션을 수동으로 관리하는 패턴입니다.
+
 ```csharp
-using (var session = sessionFactory.OpenSession())
-using (var transaction = session.BeginTransaction())
+// GetCurrentSession을 사용한 트랜잭션 관리
+using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
 {
     try
     {
-        // 작업 수행
-        session.Save(entity);
-        transaction.Commit(); // 성공 시 커밋
+        // Repository를 통한 작업 수행
+        var board = new Board { ... };
+        boardRepository.Add(board);
+        
+        tx.Commit(); // 성공 시 커밋
     }
     catch
     {
-        transaction.Rollback(); // 실패 시 롤백
+        tx.Rollback(); // 실패 시 롤백
         throw;
     }
 }
 ```
+이 패턴은 서비스 계층의 각 비즈니스 메서드 단위로 트랜잭션을 제어할 수 있게 해줍니다.
 
 ### Spring 선언적 트랜잭션 (고급)
 
@@ -472,6 +463,8 @@ public void CreateBoard(string title, string content, string author)
 
 ## 🔧 applicationContext.xml 설정
 
+`IBoardService`의 구현체인 `BoardService`를 Spring 컨테이너에 Bean으로 등록합니다. `applicationContext.xml` 파일에 다음 내용을 추가하세요.
+
 ```xml
 <!-- Board Service -->
 <object id="boardService"
@@ -481,6 +474,7 @@ public void CreateBoard(string title, string content, string author)
     <constructor-arg ref="sessionFactory" />
 </object>
 ```
+`BoardService`는 생성자에서 `IBoardRepository`, `IReplyRepository`, `ISessionFactory`를 주입받으므로, XML 설정에서도 이 세 가지 Bean을 `constructor-arg`로 참조(`ref`)해 줍니다.
 
 ## 💡 핵심 정리
 

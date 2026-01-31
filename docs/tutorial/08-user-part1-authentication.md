@@ -61,7 +61,25 @@ namespace SpringNet.Domain.Entities
 </hibernate-mapping>
 ```
 
-## 🔐 인증 서비스 구현
+### 🔐 인증 서비스 구현
+
+#### DTOs/UserDto.cs
+
+`SpringNet.Service/DTOs/UserDto.cs`:
+
+```csharp
+namespace SpringNet.Service.DTOs
+{
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string FullName { get; set; }
+        public string Role { get; set; }
+    }
+}
+```
 
 ### IAuthService
 
@@ -86,6 +104,8 @@ namespace SpringNet.Service
 
 ### AuthService 구현
 
+`SpringNet.Service/AuthService.cs`:
+
 ```csharp
 using NHibernate;
 using SpringNet.Domain.Entities;
@@ -108,50 +128,113 @@ namespace SpringNet.Service
 
         public UserDto Register(string username, string email, string password, string fullName)
         {
-            using (var session = sessionFactory.OpenSession())
-            using (var tx = session.BeginTransaction())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                // 중복 검사
-                if (!IsUsernameAvailable(username))
-                    throw new ArgumentException("이미 사용 중인 사용자명입니다.");
-
-                if (!IsEmailAvailable(email))
-                    throw new ArgumentException("이미 사용 중인 이메일입니다.");
-
-                var user = new User
+                try
                 {
-                    Username = username,
-                    Email = email,
-                    PasswordHash = HashPassword(password),
-                    FullName = fullName
-                };
+                    // 중복 검사
+                    if (!IsUsernameAvailable(username))
+                        throw new ArgumentException("이미 사용 중인 사용자명입니다.");
 
-                session.Save(user);
-                tx.Commit();
+                    if (!IsEmailAvailable(email))
+                        throw new ArgumentException("이미 사용 중인 이메일입니다.");
 
-                return MapToUserDto(user);
+                    var user = new User
+                    {
+                        Username = username,
+                        Email = email,
+                        PasswordHash = HashPassword(password),
+                        FullName = fullName
+                    };
+
+                    sessionFactory.GetCurrentSession().Save(user);
+                    tx.Commit();
+
+                    return MapToUserDto(user);
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
             }
         }
 
         public UserDto Login(string username, string password)
         {
-            using (var session = sessionFactory.OpenSession())
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
             {
-                var user = session.Query<User>()
-                    .FirstOrDefault(u => u.Username == username && u.IsActive);
+                try
+                {
+                    var user = sessionFactory.GetCurrentSession().Query<User>()
+                        .FirstOrDefault(u => u.Username == username && u.IsActive);
 
-                if (user == null)
-                    throw new UnauthorizedAccessException("사용자를 찾을 수 없습니다.");
+                    if (user == null)
+                        throw new UnauthorizedAccessException("사용자를 찾을 수 없습니다.");
 
-                if (!VerifyPassword(password, user.PasswordHash))
-                    throw new UnauthorizedAccessException("비밀번호가 일치하지 않습니다.");
+                    if (!VerifyPassword(password, user.PasswordHash))
+                        throw new UnauthorizedAccessException("비밀번호가 일치하지 않습니다.");
 
-                // 마지막 로그인 시간 업데이트
-                user.LastLoginDate = DateTime.Now;
-                session.Update(user);
-                session.Flush();
+                    // 마지막 로그인 시간 업데이트
+                    user.LastLoginDate = DateTime.Now;
+                    sessionFactory.GetCurrentSession().Update(user);
+                    tx.Commit();
 
-                return MapToUserDto(user);
+                    return MapToUserDto(user);
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
+            }
+        }
+
+        public void Logout(int userId)
+        {
+            // Logout logic would typically be handled at the web layer (e.g., clearing session)
+            // No direct DB interaction here, but method signature is part of IAuthService.
+            // If LastLoginDate was to be cleared or a logout timestamp recorded, it would be done here.
+            // For now, no action.
+        }
+
+        public bool IsUsernameAvailable(string username)
+        {
+            using (sessionFactory.GetCurrentSession().BeginTransaction())
+            {
+                return !sessionFactory.GetCurrentSession().Query<User>().Any(u => u.Username == username);
+            }
+        }
+
+        public bool IsEmailAvailable(string email)
+        {
+            using (sessionFactory.GetCurrentSession().BeginTransaction())
+            {
+                return !sessionFactory.GetCurrentSession().Query<User>().Any(u => u.Email == email);
+            }
+        }
+
+        public void ChangePassword(int userId, string oldPassword, string newPassword)
+        {
+            using (var tx = sessionFactory.GetCurrentSession().BeginTransaction())
+            {
+                try
+                {
+                    var user = sessionFactory.GetCurrentSession().Get<User>(userId);
+                    if (user == null) throw new ArgumentException("사용자를 찾을 수 없습니다.");
+                    
+                    if (!VerifyPassword(oldPassword, user.PasswordHash))
+                        throw new UnauthorizedAccessException("기존 비밀번호가 일치하지 않습니다.");
+
+                    user.PasswordHash = HashPassword(newPassword);
+                    sessionFactory.GetCurrentSession().Update(user);
+                    tx.Commit();
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
             }
         }
 
@@ -170,22 +253,6 @@ namespace SpringNet.Service
         {
             var hash = HashPassword(password);
             return hash == passwordHash;
-        }
-
-        public bool IsUsernameAvailable(string username)
-        {
-            using (var session = sessionFactory.OpenSession())
-            {
-                return !session.Query<User>().Any(u => u.Username == username);
-            }
-        }
-
-        public bool IsEmailAvailable(string email)
-        {
-            using (var session = sessionFactory.OpenSession())
-            {
-                return !session.Query<User>().Any(u => u.Email == email);
-            }
         }
 
         private UserDto MapToUserDto(User user)
@@ -209,13 +276,21 @@ namespace SpringNet.Service
 
 ```csharp
 using SpringNet.Service;
+using SpringNet.Service.DTOs;
+using System;
 using System.Web.Mvc;
 
 namespace SpringNet.Web.Controllers
 {
     public class AccountController : Controller
     {
-        public IAuthService AuthService { get; set; }
+        private readonly IAuthService authService;
+
+        // 생성자 주입 사용
+        public AccountController(IAuthService authService)
+        {
+            this.authService = authService;
+        }
 
         // 회원가입 폼
         public ActionResult Register()
@@ -238,11 +313,11 @@ namespace SpringNet.Web.Controllers
 
             try
             {
-                var user = AuthService.Register(username, email, password, fullName);
+                var user = authService.Register(username, email, password, fullName);
                 TempData["Success"] = "회원가입이 완료되었습니다.";
                 return RedirectToAction("Login");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
                 return View();
@@ -262,7 +337,7 @@ namespace SpringNet.Web.Controllers
         {
             try
             {
-                var user = AuthService.Login(username, password);
+                var user = authService.Login(username, password);
 
                 // 세션에 사용자 정보 저장
                 Session["UserId"] = user.Id;
@@ -274,7 +349,7 @@ namespace SpringNet.Web.Controllers
 
                 return RedirectToAction("Index", "Home");
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
                 return View();
@@ -291,14 +366,85 @@ namespace SpringNet.Web.Controllers
 }
 ```
 
-## 💡 핵심 정리
+### 📢 계정 관련 뷰 (Razor Views)
 
-### 비밀번호 보안
+#### `Views/Account/Register.cshtml` (회원가입 폼)
 
-✅ **절대 평문 저장 금지**
-✅ SHA256 이상의 해시 사용
-✅ Salt 추가 권장 (실전)
-✅ BCrypt 사용 권장 (실전)
+```html
+@{
+    ViewBag.Title = "회원가입";
+}
+
+<h2>회원가입</h2>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @Html.ValidationSummary()
+    </div>
+}
+
+<form method="post" action="@Url.Action("Register")">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        <label>사용자명</label>
+        <input type="text" name="username" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>이메일</label>
+        <input type="email" name="email" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" name="password" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>비밀번호 확인</label>
+        <input type="password" name="confirmPassword" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>이름</label>
+        <input type="text" name="fullName" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">가입하기</button>
+    <a href="@Url.Action("Login")" class="btn btn-secondary">로그인</a>
+</form>
+```
+
+#### `Views/Account/Login.cshtml` (로그인 폼)
+
+```html
+@{
+    ViewBag.Title = "로그인";
+}
+
+<h2>로그인</h2>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @Html.ValidationSummary()
+    </div>
+}
+
+<form method="post" action="@Url.Action("Login", new { returnUrl = Request.QueryString["ReturnUrl"] })">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        <label>사용자명</label>
+        <input type="text" name="username" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" name="password" class="form-control" required />
+    </div>
+
+    <button type="submit" class="btn btn-primary">로그인</button>
+    <a href="@Url.Action("Register")" class="btn btn-secondary">회원가입</a>
+</form>
+```
 
 ### 세션 관리
 
@@ -312,6 +458,217 @@ var userId = Session["UserId"];
 // 세션 삭제
 Session.Clear();
 ```
+
+## ⚙️ Spring.NET XML 설정 분리 (Refactoring)
+
+`applicationContext.xml` 파일이 점점 길어지고 복잡해지고 있습니다. 이제 Spring.NET 설정 파일들을 역할에 따라 여러 파일로 분리하여 관리하는 방법을 배워보겠습니다. 이는 설정의 가독성, 유지보수성, 그리고 모듈성을 크게 향상시킵니다.
+
+### 1. 새로운 설정 파일 생성
+
+`SpringNet.Web/Config/` 폴더에 다음 세 개의 XML 파일을 새로 생성합니다.
+
+-   `dataAccess.xml`: `SessionFactory`, Repository Bean들을 정의합니다.
+-   `services.xml`: Service Bean들과 Logger Bean들을 정의합니다.
+-   `controllers.xml`: Controller Bean들을 정의합니다.
+
+#### `dataAccess.xml` 내용
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<objects xmlns="http://www.springframework.net">
+
+    <!-- SessionFactory Bean -->
+    <object id="sessionFactory"
+            type="SpringNet.Data.NHibernateHelper, SpringNet.Data"
+            factory-method="SessionFactory"
+            singleton="true" />
+            
+    <!-- Repositories -->
+    <object id="userRepository"
+            type="SpringNet.Data.Repositories.UserRepository, SpringNet.Data">
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+    <object id="productRepository"
+            type="SpringNet.Data.Repositories.ProductRepository, SpringNet.Data">
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+    <object id="boardRepository"
+            type="SpringNet.Data.Repositories.BoardRepository, SpringNet.Data">
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+    <object id="replyRepository"
+            type="SpringNet.Data.Repositories.ReplyRepository, SpringNet.Data">
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+</objects>
+```
+
+#### `services.xml` 내용
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<objects xmlns="http://www.springframework.net">
+
+    <!-- ... (튜토리얼 01, 02에서 추가한 testService, greetingService, logger 등) ... -->
+    <object id="testService" type="System.String">
+        <constructor-arg value="Spring.NET is working!" />
+    </object>
+    <object id="greetingService" type="SpringNet.Service.GreetingService, SpringNet.Service">
+        <constructor-arg name="prefix" value="안녕하세요" />
+    </object>
+    <object id="fileLogger" type="SpringNet.Service.Logging.FileLogger, SpringNet.Service">
+        <constructor-arg name="logFilePath" value="C:/logs/springnet.log" />
+        <constructor-arg name="appName" value="SpringNetApp" />
+    </object>
+    <object id="consoleLogger" type="SpringNet.Service.Logging.ConsoleLogger, SpringNet.Service" />
+    <object id="logger" type="SpringNet.Service.Logging.CompositeLogger, SpringNet.Service">
+        <constructor-arg name="loggers">
+            <list element-type="SpringNet.Service.Logging.ILogger, SpringNet.Service">
+                <ref object="fileLogger" />
+                <ref object="consoleLogger" />
+            </list>
+        </constructor-arg>
+    </object>
+
+    <!-- Services -->
+    <object id="productService" type="SpringNet.Service.ProductService, SpringNet.Service">
+        <constructor-arg ref="productRepository" />
+    </object>
+    <object id="boardService" type="SpringNet.Service.BoardService, SpringNet.Service">
+        <constructor-arg ref="boardRepository" />
+        <constructor-arg ref="replyRepository" />
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+    <!-- Auth Service (New!) -->
+    <object id="authService"
+            type="SpringNet.Service.AuthService, SpringNet.Service">
+        <constructor-arg ref="userRepository" />
+        <constructor-arg ref="sessionFactory" />
+    </object>
+
+</objects>
+```
+
+#### `controllers.xml` 내용 (생성자 주입으로 통일)
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<objects xmlns="http://www.springframework.net">
+
+    <!-- HomeController -->
+    <object id="homeController"
+            type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
+        <constructor-arg name="testService" ref="testService" />
+        <constructor-arg name="greetingService" ref="greetingService" />
+        <constructor-arg name="logger" ref="logger" />
+    </object>
+
+    <!-- BoardController -->
+    <object id="boardController"
+            type="SpringNet.Web.Controllers.BoardController, SpringNet.Web">
+        <constructor-arg name="boardService" ref="boardService" />
+    </object>
+
+    <!-- AccountController (New!) -->
+    <object id="accountController"
+            type="SpringNet.Web.Controllers.AccountController, SpringNet.Web">
+        <constructor-arg name="authService" ref="authService" />
+    </object>
+
+</objects>
+```
+
+### 2. `applicationContext.xml` 수정
+
+기존 `applicationContext.xml`의 모든 Bean 정의를 삭제하고, 새로 만든 설정 파일들을 `<import>` 하도록 수정합니다.
+
+```xml
+<?xml version="1.0" encoding="utf-8" ?>
+<objects xmlns="http://www.springframework.net">
+
+    <import resource="~/Config/dataAccess.xml" />
+    <import resource="~/Config/services.xml" />
+    <import resource="~/Config/controllers.xml" />
+
+</objects>
+```
+
+### 3. 프로젝트 파일 업데이트 (`SpringNet.Web.csproj`)
+
+새로 생성한 `dataAccess.xml`, `services.xml`, `controllers.xml` 파일들을 `SpringNet.Web.csproj`에 `Content` 아이템으로 추가합니다.
+
+```xml
+<ItemGroup>
+  <Content Include="Config\applicationContext.xml" />
+  <Content Include="Config\dataAccess.xml">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  <Content Include="Config\services.xml">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  <Content Include="Config\controllers.xml">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  <!-- ... 다른 Content 파일들 ... -->
+</ItemGroup>
+```
+
+## 📢 프로젝트 파일 및 폴더 설정
+
+이 튜토리얼에서 추가한 파일과 폴더들을 프로젝트에 반영해야 합니다.
+
+#### 1. `SpringNet.Domain` 프로젝트
+-   `Entities` 폴더에 `User.cs` 파일을 생성합니다.
+-   `SpringNet.Domain.csproj`의 `<ItemGroup>` (Compile)에 `Entities\User.cs`를 추가합니다.
+    ```xml
+    <ItemGroup>
+      <Compile Include="Entities\Board.cs" />
+      <Compile Include="Entities\Product.cs" />
+      <Compile Include="Entities\Reply.cs" />
+      <Compile Include="Entities\User.cs" />
+      <Compile Include="Properties\AssemblyInfo.cs" />
+    </ItemGroup>
+    ```
+
+#### 2. `SpringNet.Data` 프로젝트
+-   `Mappings` 폴더에 `User.hbm.xml` 파일을 생성합니다.
+-   `SpringNet.Data.csproj`의 `<ItemGroup>` (EmbeddedResource)에 `Mappings\User.hbm.xml`를 추가하고, `UserRepository` 관련 파일들도 추가합니다.
+    ```xml
+    <ItemGroup>
+      <EmbeddedResource Include="Mappings\Board.hbm.xml" />
+      <EmbeddedResource Include="Mappings\Product.hbm.xml" />
+      <EmbeddedResource Include="Mappings\Reply.hbm.xml" />
+      <EmbeddedResource Include="Mappings\User.hbm.xml" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- ... 기존 Repository들 ... -->
+        <Compile Include="Repositories\IUserRepository.cs" />
+        <Compile Include="Repositories\UserRepository.cs" />
+    </ItemGroup>
+    ```
+
+#### 3. `SpringNet.Service` 프로젝트
+-   `DTOs` 폴더에 `UserDto.cs` 파일을 생성합니다.
+-   `SpringNet.Service` 폴더에 `IAuthService.cs`와 `AuthService.cs` 파일을 생성합니다.
+-   `SpringNet.Service.csproj`의 `<ItemGroup>` (Compile)에 다음을 추가합니다.
+    ```xml
+    <ItemGroup>
+      <!-- ... 기존 서비스 및 DTO들 ... -->
+      <Compile Include="DTOs\UserDto.cs" />
+      <Compile Include="IAuthService.cs" />
+      <Compile Include="AuthService.cs" />
+    </ItemGroup>
+    ```
+
+#### 4. `SpringNet.Web` 프로젝트
+-   `Controllers` 폴더에 `AccountController.cs` 파일을 생성합니다.
+-   `SpringNet.Web.csproj`의 `<ItemGroup>` (Compile)에 `Controllers\AccountController.cs`를 추가합니다.
+-   `Views` 폴더에 `Account` 폴더를 새로 만들고, 그 안에 `Register.cshtml`과 `Login.cshtml` 파일을 생성합니다.
 
 ## 🚀 다음 단계
 

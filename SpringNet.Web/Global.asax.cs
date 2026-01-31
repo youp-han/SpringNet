@@ -18,6 +18,7 @@ namespace SpringNet.Web
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             //BundleConfig.RegisterBundles(BundleTable.Bundles);
 
+            // Spring.NET Controller Factory µî·Ï
             ControllerBuilder.Current.SetControllerFactory(
                 new SpringControllerFactory()
                 );

@@ -395,7 +395,8 @@ namespace SpringNet.Service.Logging
             => Console.WriteLine($"[INFO] {message}");
 
         public void Warning(string message)
-            => Console.ForegroundColor = ConsoleColor.Yellow;
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"[WARNING] {message}");
             Console.ResetColor();
         }
@@ -455,19 +456,52 @@ namespace SpringNet.Service.Logging
 }
 ```
 
+#### 📢 프로젝트 파일 업데이트
+
+튜토리얼 01에서 생성한 파일을 포함하도록 `SpringNet.Service.csproj`를 이미 수정했습니다. 이제 새로운 로거 파일들을 추가해 봅시다.
+
+`SpringNet.Service.csproj` 파일을 열고 `<ItemGroup>` 섹션을 다음과 같이 업데이트합니다.
+
+```xml
+<ItemGroup>
+  <Compile Include="GreetingService.cs" />
+  <Compile Include="IGreetingService.cs" />
+  <Compile Include="Logging\CompositeLogger.cs" />
+  <Compile Include="Logging\ConsoleLogger.cs" />
+  <Compile Include="Logging\FileLogger.cs" />
+  <Compile Include="Logging\ILogger.cs" />
+  <Compile Include="Properties\AssemblyInfo.cs" />
+</ItemGroup>
+```
+**참고**: `Logging` 폴더를 만들고 그 안에 파일을 넣었으므로, 경로에 `Logging\`이 포함됩니다.
+
 ### Step 3: XML 설정
 
-`Config/applicationContext.xml`:
+`Config/applicationContext.xml` 파일을 열어 이전 단계의 Bean들은 그대로 두고, 새로운 로거 관련 Bean들을 추가하고 `homeController` 정의를 수정합니다. `HomeController`가 생성자 주입을 사용하도록 변경되었으므로, XML 설정도 이에 맞게 `<constructor-arg>`를 사용해야 합니다.
 
 ```xml
 <?xml version="1.0" encoding="utf-8" ?>
-<objects xmlns="http://www.springframework.net">
+<objects xmlns="http://www.springframework.net"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.net
+         http://www.springframework.net/xsd/spring/spring-objects.xsd">
+
+    <!-- 튜토리얼 01에서 추가한 Bean들 -->
+    <object id="testService" type="System.String">
+        <constructor-arg value="Spring.NET is working!" />
+    </object>
+    <object id="greetingService"
+            type="SpringNet.Service.GreetingService, SpringNet.Service">
+        <constructor-arg name="prefix" value="안녕하세요" />
+    </object>
+    
+    <!-- === 여기서부터 새로 추가 === -->
 
     <!-- File Logger -->
     <object id="fileLogger"
             type="SpringNet.Service.Logging.FileLogger, SpringNet.Service">
-        <constructor-arg value="C:/logs/springnet.log" />
-        <constructor-arg value="SpringNetApp" />
+        <constructor-arg name="logFilePath" value="C:/logs/springnet.log" />
+        <constructor-arg name="appName" value="SpringNetApp" />
     </object>
 
     <!-- Console Logger -->
@@ -478,7 +512,7 @@ namespace SpringNet.Service.Logging
     <!-- Composite Logger (여러 Logger 결합) -->
     <object id="logger"
             type="SpringNet.Service.Logging.CompositeLogger, SpringNet.Service">
-        <constructor-arg>
+        <constructor-arg name="loggers">
             <list element-type="SpringNet.Service.Logging.ILogger, SpringNet.Service">
                 <ref object="fileLogger" />
                 <ref object="consoleLogger" />
@@ -486,20 +520,27 @@ namespace SpringNet.Service.Logging
         </constructor-arg>
     </object>
 
-    <!-- HomeController -->
+    <!-- HomeController에 모든 의존성을 생성자로 주입 -->
     <object id="homeController"
             type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
-        <property name="Logger" ref="logger" />
+        <constructor-arg name="testService" ref="testService" />
+        <constructor-arg name="greetingService" ref="greetingService" />
+        <constructor-arg name="logger" ref="logger" />
     </object>
 
 </objects>
 ```
 
+**핵심 변경사항**:
+1.  `fileLogger`, `consoleLogger`, 그리고 이 둘을 합친 `logger` Bean을 정의했습니다.
+2.  `homeController` Bean이 `<property>` 대신 `<constructor-arg>`를 사용하여 모든 의존성(`testService`, `greetingService`, `logger`)을 생성자를 통해 주입받도록 수정했습니다.
+
 ### Step 4: Controller에서 사용
 
-`Controllers/HomeController.cs`:
+`Controllers/HomeController.cs`를 열어 생성자 주입을 통해 `ILogger`를 받도록 수정합니다.
 
 ```csharp
+using SpringNet.Service;
 using SpringNet.Service.Logging;
 using System.Web.Mvc;
 
@@ -507,19 +548,34 @@ namespace SpringNet.Web.Controllers
 {
     public class HomeController : Controller
     {
-        public ILogger Logger { get; set; }
+        private readonly string testService;
+        private readonly IGreetingService greetingService;
+        private readonly ILogger logger;
+
+        // 생성자를 통해 모든 의존성 주입
+        public HomeController(
+            string testService,
+            IGreetingService greetingService,
+            ILogger logger)
+        {
+            this.testService = testService;
+            this.greetingService = greetingService;
+            this.logger = logger;
+        }
 
         public ActionResult Index()
         {
-            Logger?.Info("Index page accessed");
+            logger.Info("Index page accessed");
 
-            ViewBag.Message = "로깅 시스템 테스트";
+            ViewBag.Message = testService;
+            ViewBag.Greeting = greetingService.GetGreeting("개발자");
+            
             return View();
         }
 
         public ActionResult About()
         {
-            Logger?.Debug("About page accessed");
+            logger.Debug("About page accessed");
 
             ViewBag.Message = "Your application description page.";
             return View();
@@ -527,7 +583,7 @@ namespace SpringNet.Web.Controllers
 
         public ActionResult Contact()
         {
-            Logger?.Warning("Contact page accessed");
+            logger.Warning("Contact page accessed");
 
             ViewBag.Message = "Your contact page.";
             return View();

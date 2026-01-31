@@ -236,48 +236,59 @@ SpringNet.Web/
 
 ### 4. Global.asax.cs - Spring MVC 통합
 
-`SpringNet.Web/Global.asax.cs`:
+`SpringNet.Web/Global.asax.cs` 파일을 열어 `MvcApplication` 클래스가 `Spring.Web.Mvc.SpringMvcApplication`을 상속하도록 수정합니다. 이렇게 하면 Spring.NET과 ASP.NET MVC의 통합이 더 원활해지고, `ControllerFactory`를 수동으로 설정할 필요가 없습니다.
 
 ```csharp
 using System.Web.Mvc;
 using System.Web.Routing;
-using Spring.Web.Mvc;
+using Spring.Web.Mvc; // SpringMvcApplication을 위해 필요
 
 namespace SpringNet.Web
 {
-    public class MvcApplication : System.Web.HttpApplication
+    // System.Web.HttpApplication 대신 SpringMvcApplication을 상속
+    public class MvcApplication : SpringMvcApplication
     {
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();
             RouteConfig.RegisterRoutes(RouteTable.Routes);
 
-            // Spring.NET Controller Factory 등록
-            ControllerBuilder.Current.SetControllerFactory(
-                new SpringControllerFactory()
-            );
+            // SpringMvcApplication이 ControllerFactory를 자동으로 설정해 주므로
+            // ControllerBuilder.Current.SetControllerFactory(...) 코드가 더 이상 필요 없음
         }
     }
 }
 ```
 
-**핵심**:
-- `SpringControllerFactory`: Spring이 컨트롤러 생성 및 의존성 주입 담당
+**핵심**: `SpringMvcApplication`은 Spring.NET이 컨트롤러의 생성과 의존성 주입을 자동으로 처리하도록 설정해주는 편리한 기반 클래스입니다.
 
 ### 5. Controller에서 DI 받기
 
-`SpringNet.Web/Controllers/HomeController.cs`:
+컨트롤러에서 의존성을 주입받는 방법은 생성자 주입을 사용하는 것이 가장 좋습니다. 이는 의존성이 명확하게 드러나고, 객체가 생성될 때 모든 의존성이 준비되었음을 보장합니다.
 
+`SpringNet.Web/Controllers/HomeController.cs`:
 ```csharp
+using SpringNet.Service; // IGreetingService 사용
+using System.Web.Mvc;
+
 public class HomeController : Controller
 {
-    // Spring이 주입할 프로퍼티
-    public string TestService { get; set; }
+    // 의존성을 저장할 readonly 필드
+    private readonly string testService;
+    private readonly IGreetingService greetingService;
+
+    // 생성자 주입: Spring이 이 생성자를 통해 Bean들을 주입
+    public HomeController(string testService, IGreetingService greetingService)
+    {
+        this.testService = testService;
+        this.greetingService = greetingService;
+    }
 
     public ActionResult Index()
     {
-        // 주입된 값 사용
-        ViewBag.Message = TestService;
+        // 주입된 서비스 사용
+        ViewBag.Message = testService;
+        ViewBag.Greeting = greetingService.GetGreeting("개발자");
         return View();
     }
 }
@@ -308,7 +319,7 @@ namespace SpringNet.Service
 {
     public class GreetingService : IGreetingService
     {
-        private string prefix;
+        private readonly string prefix;
 
         // 생성자 주입
         public GreetingService(string prefix)
@@ -324,39 +335,55 @@ namespace SpringNet.Service
 }
 ```
 
+#### 📢 프로젝트 파일 업데이트 (중요)
+
+새로운 클래스 파일을 추가한 후에는 Visual Studio가 이를 인식하고 컴파일할 수 있도록 `.csproj` 파일을 업데이트해야 합니다.
+
+1.  `SpringNet.Service` 폴더에서 `Class1.cs` 파일을 삭제합니다.
+2.  `SpringNet.Service.csproj` 파일을 텍스트 편집기에서 열고 다음을 수정합니다.
+
+    기존:
+    ```xml
+    <ItemGroup>
+      <Compile Include="Class1.cs" />
+      <Compile Include="Properties\AssemblyInfo.cs" />
+    </ItemGroup>
+    ```
+
+    변경:
+    ```xml
+    <ItemGroup>
+      <Compile Include="GreetingService.cs" />
+      <Compile Include="IGreetingService.cs" />
+      <Compile Include="Properties\AssemblyInfo.cs" />
+    </ItemGroup>
+    ```
+
+**팁**: Visual Studio의 "솔루션 탐색기"에서 프로젝트에 파일을 직접 추가하면 `.csproj` 파일이 자동으로 업데이트됩니다. 하지만 텍스트 편집기나 다른 도구를 사용해 수동으로 파일을 생성했다면 이 과정이 필요합니다.
+
 ### Step 3: applicationContext.xml에 Bean 등록
 
-```xml
-<!-- 인사말 서비스 등록 -->
-<object id="greetingService"
-        type="SpringNet.Service.GreetingService, SpringNet.Service">
-    <constructor-arg value="안녕하세요" />
-</object>
+`HomeController`의 생성자 주입에 맞게 XML 설정을 수정합니다.
 
-<!-- HomeController 수정 -->
-<object id="homeController"
-        type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
-    <property name="TestService" ref="testService" />
-    <property name="GreetingService" ref="greetingService" />
-</object>
+```xml
+    <!-- 인사말 서비스 등록 -->
+    <object id="greetingService"
+            type="SpringNet.Service.GreetingService, SpringNet.Service">
+        <constructor-arg name="prefix" value="안녕하세요" />
+    </object>
+
+    <!-- HomeController 수정 (생성자 주입 사용) -->
+    <object id="homeController"
+            type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
+        <constructor-arg name="testService" ref="testService" />
+        <constructor-arg name="greetingService" ref="greetingService" />
+    </object>
+</objects>
 ```
 
 ### Step 4: Controller에서 사용
 
-```csharp
-public class HomeController : Controller
-{
-    public string TestService { get; set; }
-    public IGreetingService GreetingService { get; set; }
-
-    public ActionResult Index()
-    {
-        ViewBag.Message = TestService;
-        ViewBag.Greeting = GreetingService.GetGreeting("개발자");
-        return View();
-    }
-}
-```
+`HomeController`는 이미 위에서 생성자 주입을 사용하도록 수정되었습니다.
 
 ### Step 5: View에서 표시
 

@@ -4,12 +4,15 @@
 		xsi:schemaLocation="http://www.springframework.net 
 		http://www.springframework.net/xsd/spring/spring-objects.xsd">
 
+	<!-- bean 정의 예제 1: 단순 문자열 -->
 	<object id="testService" type="System.String">
-		<constructor-arg value="Spring Loaded" />
-
+		<constructor-arg value="Spring.Net is Working !!!" />
 	</object>
+
+	<!-- bean 정의 예제 2: HomeController -->
 	<object id="homeController"
         type="SpringNet.Web.Controllers.HomeController, SpringNet.Web">
+		<!-- property 주입 예제	-->	
 		<property name="TestService" ref="testService" />
 	</object>
 

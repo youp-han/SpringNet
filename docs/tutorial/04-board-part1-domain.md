@@ -228,6 +228,37 @@ namespace SpringNet.Domain.Entities
 
 **중요**: `.hbm.xml` 파일 속성을 **포함 리소스**로 설정!
 
+### 📢 프로젝트 파일 업데이트
+새로운 엔티티와 매핑 파일들을 각 프로젝트에 포함시켜야 합니다.
+
+#### 1. `SpringNet.Domain.csproj` 업데이트
+`Board.cs`와 `Reply.cs`를 `<Compile>` 아이템으로 추가합니다.
+
+```xml
+<ItemGroup>
+  <Compile Include="Entities\Board.cs" />
+  <Compile Include="Entities\Product.cs" />
+  <Compile Include="Entities\Reply.cs" />
+  <Compile Include="Properties\AssemblyInfo.cs" />
+</ItemGroup>
+```
+
+#### 2. `SpringNet.Data.csproj` 업데이트
+`Board.hbm.xml`과 `Reply.hbm.xml`을 `<EmbeddedResource>` 아이템으로 추가합니다.
+
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="Mappings\Board.hbm.xml" />
+  <EmbeddedResource Include="Mappings\Product.hbm.xml" />
+  <EmbeddedResource Include="Mappings\Reply.hbm.xml" />
+</ItemGroup>
+```
+
+#### 매핑 파일 자동 탐지
+`hibernate.cfg.xml` 파일을 수정할 필요가 없는지 궁금할 수 있습니다. 다행히도 수정할 필요가 없습니다!
+
+이전 튜토리얼에서 `<mapping assembly="SpringNet.Domain" />` 한 줄을 추가했습니다. 이 설정은 NHibernate가 `SpringNet.Domain` 어셈블리 내에서 `.hbm.xml`로 끝나고 `포함 리소스(Embedded Resource)`로 설정된 모든 파일을 자동으로 찾아 로드하도록 지시합니다. 따라서 새 매핑 파일을 추가할 때마다 XML 파일을 수동으로 업데이트할 필요가 없습니다.
+
 ## 🔍 엔티티 관계 이해
 
 ### One-to-Many vs Many-to-One
@@ -294,6 +325,33 @@ using (var session = sessionFactory.OpenSession())
 ```
 
 ## 🧪 도메인 모델 테스트
+
+엔티티에 비즈니스 로직을 추가했다면, 단위 테스트를 통해 의도한 대로 동작하는지 검증하는 것이 매우 중요합니다.
+
+### 🧪 테스트 프로젝트 설정
+예제 코드를 실행하려면 먼저 단위 테스트 프로젝트를 설정해야 합니다.
+
+1.  **테스트 프로젝트 생성**
+    -   솔루션 우클릭 → 추가 → **새 프로젝트**
+    -   **클래스 라이브러리(.NET Framework)** 템플릿 선택
+    -   프로젝트 이름: `SpringNet.Tests`
+
+2.  **프로젝트 참조 추가**
+    -   `SpringNet.Tests` 프로젝트의 `참조` 우클릭 → **참조 추가**
+    -   `프로젝트` 탭에서 `SpringNet.Domain`을 체크하고 확인을 누릅니다.
+
+3.  **NuGet 패키지 설치**
+    -   `SpringNet.Tests` 프로젝트를 대상으로 패키지 관리자 콘솔에서 다음 명령을 실행합니다.
+    ```powershell
+    Install-Package NUnit -Version 3.13.3
+    Install-Package NUnit3TestAdapter -Version 4.2.1
+    Install-Package Microsoft.NET.Test.Sdk -Version 17.1.0
+    ```
+
+4.  **초기 파일 삭제**
+    -   `SpringNet.Tests` 프로젝트에 자동으로 생성된 `Class1.cs` 파일을 삭제합니다.
+
+이제 테스트 코드를 작성하고 실행할 준비가 되었습니다!
 
 ### 단위 테스트 예제
 

@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace SpringNet.Domain
 {
-    public class Class1
+    public class User
     {
+        public virtual int Id { get; protected set; }
+        public virtual string Name { get; set; }
+
     }
 }

@@ -8,6 +8,7 @@ namespace SpringNet.Web.Controllers
 {
     public class HomeController : Controller
     {
+        // Spring.NET을 통해 주입되는 프로퍼티
         public string TestService { get; set; }
 
 

@@ -25,7 +25,7 @@
 - ✅ **실전 프로젝트 중심** - 게시판, 사용자 관리, 쇼핑몰 등 3개의 실전 프로젝트 포함
 - ✅ **단계별 학습** - 기초부터 고급까지 20개의 체계적인 단계
 - ✅ **완전한 예제 코드** - 모든 단계마다 동작하는 코드 예제 제공
-- ✅ **실무 패턴** - Repository, Unit of Work, Specification 등 실무 디자인 패턴 포함
+- ✅ **실무 패턴** - Repository, Spring.NET 컨텍스트 기반의 Unit of Work, Specification, Soft Delete, Audit Trail 등 실무 디자인 패턴 포함
 
 ## 🎯 학습 목표
 
@@ -34,10 +34,12 @@
 - 🔹 **Spring.NET IoC/DI** - 의존성 주입과 제어의 역전 완벽 이해
 - 🔹 **NHibernate ORM** - 객체-관계 매핑을 통한 데이터베이스 연동
 - 🔹 **레이어드 아키텍처** - Domain, Data, Service, Web 계층 분리 설계
-- 🔹 **RESTful Web API** - ASP.NET Web API 개발
+- 🔹 **RESTful Web API** - 기존 ASP.NET MVC 프로젝트 내에 Web API 통합 개발
 - 🔹 **고급 쿼리** - HQL, LINQ, Criteria API, Stored Procedure
-- 🔹 **디자인 패턴** - Repository, Unit of Work, Specification 패턴
+- 🔹 **디자인 패턴** - Repository, Spring.NET 컨텍스트 기반의 Unit of Work, Specification, Soft Delete, Audit Trail 패턴
 - 🔹 **실전 프로젝트** - 게시판, 사용자 관리 시스템, 쇼핑몰 구현
+- 🔹 **트랜잭션 관리** - 선언적 트랜잭션, 동시성 문제 해결
+- 🔹 **성능 및 보안** - 캐싱, Lazy/Eager Loading, SQL Injection, XSS, CSRF, 비밀번호 해싱
 
 ## 🚀 시작하기
 
@@ -127,7 +129,7 @@
 
 </details>
 
-## 🏗️ 프로젝트 구조
+## 🏗️ 프로젝트 구조 (업데이트)
 
 ```
 SpringNet/
@@ -139,35 +141,37 @@ SpringNet/
 │   └── ... (총 20개 파일)
 │
 ├── SpringNet.Domain/              # 🎯 도메인 계층
-│   └── Entities/                 # 엔티티 클래스
-│       ├── Board.cs
-│       ├── Reply.cs
-│       ├── User.cs
-│       └── Product.cs
+│   └── Entities/                 # 엔티티 클래스 (예: Board.cs, Reply.cs, User.cs, Product.cs)
+│   └── Specifications/           # Specification 패턴 구현
 │
 ├── SpringNet.Data/                # 💾 데이터 액세스 계층
-│   ├── Repositories/             # Repository 구현
-│   ├── Mappings/                 # NHibernate 매핑 (*.hbm.xml)
-│   └── NHibernateHelper.cs       # SessionFactory 관리
+│   ├── Repositories/             # Repository 구현 (Generic Repository, Specific Repositories)
+│   ├── Mappings/                 # NHibernate 매핑 (*.hbm.xml, Filters.hbm.xml)
+│   ├── Listeners/                # NHibernate 이벤트 리스너 (AuditEventListener)
+│   └── NHibernateHelper.cs       # SessionFactory 관리 (또는 LocalSessionFactoryObject)
 │
 ├── SpringNet.Service/             # 🔧 서비스 계층
-│   ├── IBoardService.cs
-│   ├── BoardService.cs
-│   ├── IAuthService.cs
-│   └── DTOs/                     # Data Transfer Objects
+│   ├── Abstractions/             # 추상화 (예: IWebUserSession)
+│   ├── DTOs/                     # Data Transfer Objects
+│   └── Logging/                  # 로깅 인터페이스 및 구현
 │
-├── SpringNet.Infrastructure/      # 🛠️ 공통 인프라
-│   └── Helpers/
+├── SpringNet.Infrastructure/      # 🛠️ 공통 인프라 (현재 비어있음, 필요시 활용)
 │
-├── SpringNet.Web/                 # 🌐 웹 프레젠테이션 (MVC)
-│   ├── Controllers/
+├── SpringNet.Web/                 # 🌐 웹 프레젠테이션 (MVC & Web API 통합)
+│   ├── Controllers/              # MVC 및 API 컨트롤러
+│   ├── Filters/                  # 커스텀 필터 (예: AuthorizeAttribute)
+│   ├── Infrastructure/           # 웹 인프라 관련 코드 (예: WebUserSession)
+│   ├── Models/                   # View Models 및 API Request/Response 모델
 │   ├── Views/
-│   ├── Config/
-│   │   └── applicationContext.xml
+│   ├── Config/                   # Spring 설정 파일 (applicationContext.xml 분리)
+│   │   ├── applicationContext.xml
+│   │   ├── dataAccess.xml
+│   │   ├── services.xml
+│   │   └── controllers.xml
 │   └── Web.config
 │
-└── SpringNet.WebAPI/              # 🔌 Web API (선택)
-    └── Controllers/
+└── SpringNet.Tests/               # 🧪 단위 및 통합 테스트 프로젝트 (선택)
+    └── ServiceTests/             # 서비스 계층 테스트
 ```
 
 ## 🛠️ 기술 스택
@@ -176,11 +180,24 @@ SpringNet/
 
 | 기술 | 버전 | 용도 |
 |------|------|------|
-| **Spring.NET** | 3.0.0 | IoC/DI 컨테이너 |
+| **Spring.NET** | 3.0.0 | IoC/DI 컨테이너, AOP, 트랜잭션 관리 |
 | **NHibernate** | 5.4.0 | ORM (객체-관계 매핑) |
 | **ASP.NET MVC** | 5.2.9 | 웹 프레임워크 |
-| **ASP.NET Web API** | 5.2.9 | RESTful API |
+| **ASP.NET Web API** | 5.2.9 | RESTful API (기존 MVC 프로젝트에 통합) |
 | **.NET Framework** | 4.8 | 런타임 |
+
+### 주요 NuGet 패키지
+
+-   `Spring.Core`, `Spring.Web`, `Spring.Web.Mvc5` (Spring.NET 핵심)
+-   `Spring.Transaction.Interceptor` (선언적 트랜잭션)
+-   `NHibernate`, `NHibernate.Caches.SysCache2` (NHibernate 핵심)
+-   `Microsoft.AspNet.WebApi`, `Microsoft.AspNet.WebApi.Cors` (Web API 통합)
+-   `Newtonsoft.Json` (JSON 직렬화)
+-   `Moq` (단위 테스트 Mocking)
+-   `NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk` (단위 테스트 프레임워크)
+-   `Swashbuckle` (Web API 문서화)
+-   `BCrypt.Net-Next` (비밀번호 해싱 - 선택적 권장)
+-   `System.Data.SQLite` (SQLite DB 드라이버 - 선택적)
 
 ### 데이터베이스
 
