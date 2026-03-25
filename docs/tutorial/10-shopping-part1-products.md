@@ -37,6 +37,21 @@ namespace SpringNet.Domain.Entities
 
 ### Product 엔티티 (기존 파일 수정)
 
+> **📌 Tutorial 03 대비 변경 요약**
+>
+> Tutorial 03에서 만든 기본 Product 엔티티를 쇼핑몰용으로 확장합니다.
+>
+> | 항목 | Tutorial 03 | Tutorial 10 (현재) |
+> |------|-------------|-------------------|
+> | `Stock` 프로퍼티 | ❌ 없음 | ✅ `int Stock` 추가 |
+> | `ImageUrl` 프로퍼티 | ❌ 없음 | ✅ `string ImageUrl` 추가 |
+> | `IsAvailable` 프로퍼티 | ❌ 없음 | ✅ `bool IsAvailable` 추가 |
+> | `Category` 관계 | ❌ 없음 | ✅ `Category Category` (Many-to-One) 추가 |
+> | `IsInStock()` 메서드 | ❌ 없음 | ✅ 재고 확인 메서드 추가 |
+> | `Product.hbm.xml` | 기본 컬럼만 | ✅ CategoryId FK + 신규 컬럼 포함으로 **전체 교체** |
+>
+> ⚠️ `Product.hbm.xml`은 내용을 부분 수정하는 것이 아니라 아래 내용으로 **전체 교체**해야 합니다.
+
 `SpringNet.Domain/Entities/Product.cs` 파일을 열어 다음 내용으로 수정합니다.
 
 ```csharp
@@ -114,9 +129,9 @@ namespace SpringNet.Domain.Entities
 </hibernate-mapping>
 ```
 
-### Product 매핑 파일 (기존 파일 수정)
+### Product 매핑 파일 (기존 파일 **전체 교체**)
 
-`SpringNet.Data/Mappings/Product.hbm.xml` 파일을 열어 다음 내용으로 수정합니다.
+`SpringNet.Data/Mappings/Product.hbm.xml` 파일의 내용을 **아래 내용으로 전부 교체**합니다. Category와의 Many-to-One 관계 및 신규 컬럼이 추가됩니다.
 
 ```xml
 <?xml version="1.0" encoding="utf-8" ?>

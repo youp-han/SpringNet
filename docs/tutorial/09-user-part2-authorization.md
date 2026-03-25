@@ -1,5 +1,28 @@
 # 09. 사용자 관리 Part 2: 인가 (Authorization)
 
+> ## ⚠️ BREAKING CHANGE 안내
+>
+> 이 튜토리얼은 **Tutorial 04~07에서 작성한 Board 관련 코드 전체를 수정**합니다.
+> 아래 마이그레이션 체크리스트를 먼저 숙지한 후 진행하세요.
+>
+> ### 마이그레이션 체크리스트
+>
+> 이 튜토리얼을 완료하려면 다음 파일들을 순서대로 수정해야 합니다:
+>
+> | 순서 | 파일 | 변경 내용 |
+> |------|------|-----------|
+> | 1 | `Boards` DB 테이블 | `Author` 컬럼 → `AuthorId` (INT) + `AuthorName` (NVARCHAR) 컬럼으로 교체 |
+> | 2 | `SpringNet.Domain/Entities/Board.cs` | `Author` 프로퍼티 → `AuthorId` + `AuthorName` |
+> | 3 | `SpringNet.Data/Mappings/Board.hbm.xml` | `Author` 매핑 제거, `AuthorId`/`AuthorName` 매핑 추가 |
+> | 4 | `SpringNet.Service/DTOs/BoardDto.cs` | `Author` → `AuthorId` + `AuthorName` |
+> | 5 | `SpringNet.Service/IBoardService.cs` | 메서드 시그니처 변경 (`author` → `authorId`, `authorName`) |
+> | 6 | `SpringNet.Service/BoardService.cs` | 전체 구현 업데이트 |
+> | 7 | `SpringNet.Web/Controllers/BoardController.cs` | 세션에서 UserId/Username 읽어 서비스 호출 |
+> | 8 | `SpringNet.Web/Views/Board/*.cshtml` | `AuthorName` 필드 사용으로 뷰 업데이트 |
+> | 9 | `SpringNet.Web/Filters/AuthorizeAttribute.cs` | 신규 파일 생성 |
+>
+> > **참고**: DB 스키마 변경은 튜토리얼 부록 **[appendix-sql-scripts.md](./appendix-sql-scripts.md)** 의 마이그레이션 SQL을 참고하세요.
+
 ## 📚 학습 목표
 
 - 권한 관리 시스템 구현

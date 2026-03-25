@@ -183,8 +183,8 @@ SpringNet.Web/
 
 <spring>
     <context>
-        <!-- Spring 설정 파일 위치 지정 -->
-        <resource uri="~/Config/applicationContext.xml" />
+        <!-- Spring 설정 파일 위치 지정 (file:// 접두어 필수) -->
+        <resource uri="file://~/Config/applicationContext.xml" />
     </context>
 </spring>
 ```
@@ -192,7 +192,7 @@ SpringNet.Web/
 **설명**:
 - `<configSections>`: Spring.NET 설정 섹션 정의
 - `<spring><context>`: Spring 컨텍스트 설정
-- `<resource uri="...">`: 설정 파일 경로
+- `<resource uri="...">`: 설정 파일 경로. **`file://~/` 접두어**를 붙여야 ASP.NET 웹 애플리케이션 루트 기준으로 파일을 찾습니다.
 
 ### 3. applicationContext.xml - Bean 정의
 
@@ -236,35 +236,39 @@ SpringNet.Web/
 
 ### 4. Global.asax.cs - Spring MVC 통합
 
-`SpringNet.Web/Global.asax.cs` 파일을 열어 `MvcApplication` 클래스가 `Spring.Web.Mvc.SpringMvcApplication`을 상속하도록 수정합니다. 이렇게 하면 Spring.NET과 ASP.NET MVC의 통합이 더 원활해지고, `ControllerFactory`를 수동으로 설정할 필요가 없습니다.
+현재 프로젝트의 `Global.asax.cs`는 `SpringControllerFactory`를 수동 등록하는 방식을 사용합니다.
 
 ```csharp
-using System.Web.Mvc;
-using System.Web.Routing;
-using Spring.Web.Mvc; // SpringMvcApplication을 위해 필요
-
-namespace SpringNet.Web
-{
-    // System.Web.HttpApplication 대신 SpringMvcApplication을 상속
-    public class MvcApplication : SpringMvcApplication
-    {
-        protected void Application_Start()
-        {
-            AreaRegistration.RegisterAllAreas();
-            RouteConfig.RegisterRoutes(RouteTable.Routes);
-
-            // SpringMvcApplication이 ControllerFactory를 자동으로 설정해 주므로
-            // ControllerBuilder.Current.SetControllerFactory(...) 코드가 더 이상 필요 없음
-        }
-    }
-}
+// 현재 프로젝트의 Global.asax.cs (수동 방식 - 동작함)
+ControllerBuilder.Current.SetControllerFactory(new SpringControllerFactory());
 ```
 
-**핵심**: `SpringMvcApplication`은 Spring.NET이 컨트롤러의 생성과 의존성 주입을 자동으로 처리하도록 설정해주는 편리한 기반 클래스입니다.
+이 방식도 완벽히 동작합니다. 이 파일은 **그대로 두어도** 됩니다.
+
+> **참고: SpringMvcApplication 방식 (선택)**
+>
+> `System.Web.HttpApplication` 대신 `Spring.Web.Mvc.SpringMvcApplication`을 상속하면 `SpringControllerFactory` 수동 등록 없이 동일한 결과를 얻을 수 있습니다. 두 방식 모두 Spring.NET DI가 컨트롤러에 적용됩니다.
+>
+> ```csharp
+> // 선택적 대안: SpringMvcApplication 상속
+> public class MvcApplication : SpringMvcApplication
+> {
+>     protected void Application_Start()
+>     {
+>         AreaRegistration.RegisterAllAreas();
+>         RouteConfig.RegisterRoutes(RouteTable.Routes);
+>         // SetControllerFactory 코드 불필요
+>     }
+> }
+> ```
+
+**핵심**: 현재 코드를 그대로 유지하고 다음 단계로 진행하세요. Spring.NET이 이미 컨트롤러에 DI를 적용하고 있습니다.
 
 ### 5. Controller에서 DI 받기
 
 컨트롤러에서 의존성을 주입받는 방법은 생성자 주입을 사용하는 것이 가장 좋습니다. 이는 의존성이 명확하게 드러나고, 객체가 생성될 때 모든 의존성이 준비되었음을 보장합니다.
+
+> **현재 `HomeController.cs`는 프로퍼티 주입** (`public string TestService { get; set; }`)을 사용합니다. 이 튜토리얼에서는 이것을 생성자 주입으로 교체합니다. 기존 파일 내용을 **아래 코드로 전체 교체**하세요.
 
 `SpringNet.Web/Controllers/HomeController.cs`:
 ```csharp

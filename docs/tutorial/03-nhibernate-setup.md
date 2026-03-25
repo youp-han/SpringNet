@@ -200,7 +200,25 @@ namespace SpringNet.Domain.Entities
 1. 솔루션 탐색기에서 파일 우클릭
 2. 속성 → 빌드 작업 → **포함 리소스** 선택
 
-### Step 5: hibernate.cfg.xml 생성
+### Step 5: SQLite NuGet 패키지 설치
+
+이 튜토리얼은 학습용 DB로 **SQLite**를 사용합니다. NHibernate에서 SQLite를 사용하려면 드라이버 패키지를 별도로 설치해야 합니다.
+
+Visual Studio의 **패키지 관리자 콘솔** (도구 → NuGet 패키지 관리자 → 패키지 관리자 콘솔)에서 아래 명령을 실행합니다. **기본 프로젝트**를 `SpringNet.Data`로 설정한 후 실행하세요.
+
+```powershell
+Install-Package System.Data.SQLite.Core -Version 1.0.118.0
+```
+
+설치 후 `SpringNet.Data/packages.config`에 아래 항목이 추가되었는지 확인합니다:
+
+```xml
+<package id="System.Data.SQLite.Core" version="1.0.118.0" targetFramework="net48" />
+```
+
+> **💡 SQL Server를 사용하는 경우**: SQLite 패키지 설치 없이 다음 Step의 `hibernate.cfg.xml`에서 SQLite 대신 SQL Server 설정을 사용하면 됩니다.
+
+### Step 6: hibernate.cfg.xml 생성
 
 `SpringNet.Data/hibernate.cfg.xml`:
 
@@ -246,7 +264,9 @@ namespace SpringNet.Domain.Entities
         <property name="hbm2ddl.auto">update</property>
 
         <!-- Mappings -->
-        <mapping assembly="SpringNet.Domain" />
+        <!-- ⚠️ 중요: hbm.xml 파일은 SpringNet.Data 프로젝트에 EmbeddedResource로 등록됩니다.
+             SpringNet.Domain이 아니라 SpringNet.Data를 지정해야 합니다. -->
+        <mapping assembly="SpringNet.Data" />
 
     </session-factory>
 </hibernate-configuration>
@@ -265,7 +285,7 @@ namespace SpringNet.Domain.Entities
   - `validate`: 매핑 검증만
   - `create-drop`: 종료 시 테이블 삭제
 
-### Step 6: SessionFactory 생성 클래스
+### Step 7: SessionFactory 생성 클래스
 
 `SpringNet.Data/NHibernateHelper.cs`:
 
@@ -808,6 +828,49 @@ var entity = session.Get<Entity>(id);
 1. HQL을 사용한 검색
 2. LINQ to NHibernate 검색
 3. 가격 범위 검색
+
+## ⚙️ 다음 튜토리얼 전 필수 설정: Web.config 업데이트
+
+Tutorial 04부터는 Repository와 Service가 `sessionFactory.GetCurrentSession()`을 사용합니다. 이 방식은 **현재 HTTP 요청에 바인딩된 세션**을 재사용하는 패턴으로, 여러 Repository가 같은 트랜잭션을 공유할 수 있게 해줍니다.
+
+`GetCurrentSession()`이 작동하려면 `Web.config`에서 **OpenSessionInViewModule**을 활성화해야 합니다.
+
+`SpringNet.Web/Web.config`의 `<system.webServer>` 섹션을 찾아 주석을 해제합니다:
+
+```xml
+<system.webServer>
+    <!-- OpenSessionInViewModule: HTTP 요청 시작 시 NHibernate 세션을 열고,
+         요청 종료 시 닫아줍니다. GetCurrentSession() 사용에 필수입니다. -->
+    <modules runAllManagedModulesForAllRequests="true">
+        <add name="Spring"
+             type="Spring.Web.Support.OpenSessionInViewModule, Spring.Web" />
+    </modules>
+    <handlers>
+        <!-- ... 기존 handlers ... -->
+    </handlers>
+</system.webServer>
+```
+
+또한 `hibernate.cfg.xml`에 세션 컨텍스트 설정을 추가합니다:
+
+```xml
+<!-- GetCurrentSession()을 위한 웹 세션 컨텍스트 설정 -->
+<property name="current_session_context_class">
+    Spring.Data.NHibernate.Web.WebSessionContext, Spring.Data.NHibernate5
+</property>
+```
+
+### OpenSession() vs GetCurrentSession() 비교
+
+| 항목 | `OpenSession()` | `GetCurrentSession()` |
+|------|----------------|----------------------|
+| 세션 생성 | 매번 새 세션 생성 | 현재 컨텍스트의 세션 재사용 |
+| 트랜잭션 공유 | 불가능 (각 Repository마다 별도 세션) | 가능 (여러 Repository가 공유) |
+| 사용 패턴 | `using (var session = ...)` | 외부에서 세션 열고 닫음 |
+| 적합한 경우 | 단순 조회, 독립 작업 | Service 계층의 복잡한 트랜잭션 |
+| 이 튜토리얼 사용 여부 | Tutorial 03 ProductRepository ✅ | Tutorial 04+ 모든 Repository ✅ |
+
+> **📌 이 튜토리얼(03)**의 `ProductRepository`는 학습 편의를 위해 `OpenSession()`을 사용합니다. **Tutorial 04부터는** `GetCurrentSession()` 패턴으로 전환됩니다. Tutorial 04 진행 전에 반드시 위 `Web.config` 설정을 완료하세요.
 
 ## 🚀 다음 단계
 

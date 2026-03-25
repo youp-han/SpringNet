@@ -9,7 +9,9 @@
 
 ## 🛠️ User 엔티티 생성
 
-`SpringNet.Domain/Entities/User.cs`:
+> **⚠️ 기존 파일 삭제 필요**: `SpringNet.Domain/` 루트에 이미 `User.cs` 파일이 있습니다 (네임스페이스: `SpringNet.Domain`, 최소 구현). 이 파일을 **삭제**하고, 아래 설명에 따라 `Entities` 폴더에 새로 만드세요. `SpringNet.Domain.csproj`에서도 기존 `<Compile Include="User.cs" />` 항목을 제거합니다.
+
+`SpringNet.Domain/Entities/User.cs` (신규 생성):
 
 ```csharp
 using System;
@@ -60,6 +62,96 @@ namespace SpringNet.Domain.Entities
     </class>
 </hibernate-mapping>
 ```
+
+## 📦 UserRepository 구현
+
+User 엔티티 저장소(Repository)를 Data 레이어에 추가합니다. 이 Repository는 이번 튜토리얼의 AuthService뿐만 아니라 이후 튜토리얼(장바구니, 주문)에서도 사용됩니다.
+
+### IUserRepository 인터페이스
+
+`SpringNet.Data/Repositories/IUserRepository.cs`:
+
+```csharp
+using SpringNet.Domain.Entities;
+
+namespace SpringNet.Data.Repositories
+{
+    public interface IUserRepository
+    {
+        void Add(User user);
+        User GetById(int id);
+        User GetByUsername(string username);
+        User GetByEmail(string email);
+        void Update(User user);
+        bool ExistsByUsername(string username);
+        bool ExistsByEmail(string email);
+    }
+}
+```
+
+### UserRepository 구현
+
+`SpringNet.Data/Repositories/UserRepository.cs`:
+
+```csharp
+using NHibernate;
+using SpringNet.Domain.Entities;
+using System.Linq;
+
+namespace SpringNet.Data.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly ISessionFactory sessionFactory;
+
+        public UserRepository(ISessionFactory sessionFactory)
+        {
+            this.sessionFactory = sessionFactory;
+        }
+
+        public void Add(User user)
+        {
+            sessionFactory.GetCurrentSession().Save(user);
+        }
+
+        public User GetById(int id)
+        {
+            return sessionFactory.GetCurrentSession().Get<User>(id);
+        }
+
+        public User GetByUsername(string username)
+        {
+            return sessionFactory.GetCurrentSession().Query<User>()
+                .FirstOrDefault(u => u.Username == username && u.IsActive);
+        }
+
+        public User GetByEmail(string email)
+        {
+            return sessionFactory.GetCurrentSession().Query<User>()
+                .FirstOrDefault(u => u.Email == email);
+        }
+
+        public void Update(User user)
+        {
+            sessionFactory.GetCurrentSession().Update(user);
+        }
+
+        public bool ExistsByUsername(string username)
+        {
+            return sessionFactory.GetCurrentSession().Query<User>()
+                .Any(u => u.Username == username);
+        }
+
+        public bool ExistsByEmail(string email)
+        {
+            return sessionFactory.GetCurrentSession().Query<User>()
+                .Any(u => u.Email == email);
+        }
+    }
+}
+```
+
+> **💡 설계 포인트**: `UserRepository`는 `GetCurrentSession()`을 직접 사용합니다. 세션은 Spring.NET의 트랜잭션 관리와 NHibernate의 `CurrentSessionContext`에 의해 외부에서 열리고 닫힙니다. Repository 내부에서 세션을 직접 열지 않도록 주의하세요.
 
 ### 🔐 인증 서비스 구현
 
@@ -545,9 +637,9 @@ Session.Clear();
     </object>
 
     <!-- Auth Service (New!) -->
+    <!-- AuthService는 ISessionFactory를 직접 사용하므로 sessionFactory만 주입 -->
     <object id="authService"
             type="SpringNet.Service.AuthService, SpringNet.Service">
-        <constructor-arg ref="userRepository" />
         <constructor-arg ref="sessionFactory" />
     </object>
 

@@ -73,6 +73,12 @@ SpringNet/
 | 18 | [18-webapi-integration.md](./18-webapi-integration.md) | ASP.NET Web API 통합 | ⭐⭐⭐⭐ |
 | 19 | [19-advanced-crud-patterns.md](./19-advanced-crud-patterns.md) | 고급 CRUD 패턴 (UoW, Specification) | ⭐⭐⭐⭐⭐ |
 
+### 📎 부록
+
+| 문서 | 설명 |
+|------|------|
+| [appendix-sql-scripts.md](./appendix-sql-scripts.md) | 전체 테이블 DDL (SQL Server / SQLite), Tutorial 09 마이그레이션 SQL, 테스트 데이터 |
+
 ## 🛠️ 필요한 도구
 
 - **Visual Studio 2022**
