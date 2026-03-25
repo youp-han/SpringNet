@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![Spring.NET](https://img.shields.io/badge/Spring.NET-3.0-green)
-![NHibernate](https://img.shields.io/badge/NHibernate-5.4-blue)
+![Spring.NET](https://img.shields.io/badge/Spring.NET-3.0.3-green)
+![NHibernate](https://img.shields.io/badge/NHibernate-5.6-blue)
 ![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-purple)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -63,8 +63,12 @@
    ```
 
 3. **데이터베이스 설정**
-   - SQL Server 사용 시: `hibernate.cfg.xml` 연결 문자열 수정
-   - SQLite 사용 시: 기본 설정 그대로 사용
+   - **SQLite 사용 시 (권장)**: NuGet 패키지 관리자 콘솔에서 아래 명령 실행 후 기본 설정 그대로 사용
+     ```powershell
+     Install-Package System.Data.SQLite.Core -Version 1.0.118.0
+     ```
+     DB 파일은 `SpringNet.Web/App_Data/springnet.db`에 자동 생성됩니다.
+   - **SQL Server 사용 시**: `SpringNet.Data/hibernate.cfg.xml` 연결 문자열 수정
 
 4. **학습 시작**
    - `docs/tutorial/00-overview.md` 파일부터 시작
@@ -77,9 +81,9 @@
 <details>
 <summary><b>Phase 1: 기초 개념 (1-3단계)</b> ⭐</summary>
 
-- [01. Spring.NET 기본 개념](docs/tutorial/01-springnet-basics.md) - IoC, DI 이해
+- [01. Spring.NET 기본 개념](docs/tutorial/01-springnet-basics.md) - IoC/DI 원리, CRUD 흐름 이해
 - [02. 의존성 주입 심화](docs/tutorial/02-dependency-injection.md) - 생성자/프로퍼티 주입
-- [03. NHibernate 설정](docs/tutorial/03-nhibernate-setup.md) - ORM 기본 설정
+- [03. NHibernate 설정](docs/tutorial/03-nhibernate-setup.md) - ORM 기본 설정, SQLite/SQL Server 연결
 
 </details>
 
@@ -96,8 +100,8 @@
 <details>
 <summary><b>Phase 3: 사용자 관리 (8-9단계)</b> ⭐⭐⭐</summary>
 
-- [08. 인증 (Authentication)](docs/tutorial/08-user-part1-authentication.md) - 회원가입, 로그인
-- [09. 인가 (Authorization)](docs/tutorial/09-user-part2-authorization.md) - 권한 관리
+- [08. 인증 (Authentication)](docs/tutorial/08-user-part1-authentication.md) - 회원가입, 로그인, UserRepository
+- [09. 인가 (Authorization)](docs/tutorial/09-user-part2-authorization.md) - 권한 관리 ⚠️ **Board 엔티티 Breaking Change 포함**
 
 </details>
 
@@ -129,16 +133,24 @@
 
 </details>
 
+<details>
+<summary><b>📎 부록</b></summary>
+
+- [SQL 스크립트 모음](docs/tutorial/appendix-sql-scripts.md) - 전체 DDL (SQL Server/SQLite), Tutorial 09 마이그레이션 SQL, 테스트 데이터
+
+</details>
+
 ## 🏗️ 프로젝트 구조 (업데이트)
 
 ```
 SpringNet/
 │
-├── docs/tutorial/                          # 📚 학습 문서 (20개 튜토리얼)
-│   ├── 00-overview.md            # 전체 로드맵
-│   ├── 01-springnet-basics.md    # Spring.NET 기초
+├── docs/tutorial/                          # 📚 학습 문서 (20개 튜토리얼 + 부록)
+│   ├── 00-overview.md                # 전체 로드맵
+│   ├── 01-springnet-basics.md        # Spring.NET 기초
 │   ├── 02-dependency-injection.md
-│   └── ... (총 20개 파일)
+│   ├── ... (01~19 총 20개 튜토리얼)
+│   └── appendix-sql-scripts.md       # 부록: 전체 DDL 및 마이그레이션 SQL
 │
 ├── SpringNet.Domain/              # 🎯 도메인 계층
 │   └── Entities/                 # 엔티티 클래스 (예: Board.cs, Reply.cs, User.cs, Product.cs)
@@ -181,7 +193,7 @@ SpringNet/
 | 기술 | 버전 | 용도 |
 |------|------|------|
 | **Spring.NET** | 3.0.0 | IoC/DI 컨테이너, AOP, 트랜잭션 관리 |
-| **NHibernate** | 5.4.0 | ORM (객체-관계 매핑) |
+| **NHibernate** | 5.6.0 | ORM (객체-관계 매핑) |
 | **ASP.NET MVC** | 5.2.9 | 웹 프레임워크 |
 | **ASP.NET Web API** | 5.2.9 | RESTful API (기존 MVC 프로젝트에 통합) |
 | **.NET Framework** | 4.8 | 런타임 |
@@ -310,7 +322,7 @@ SpringNet/
 
 ## 🙏 감사의 말
 
-- [Spring.NET](http.springframework.net/) - 공식 문서 및 커뮤니티
+- [Spring.NET](http://springframework.net/) - 공식 문서 및 커뮤니티
 - [NHibernate](https://nhibernate.info/) - ORM 프레임워크
 - 모든 기여자 및 학습자 여러분
 
