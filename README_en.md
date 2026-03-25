@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![Spring.NET](https://img.shields.io/badge/Spring.NET-3.0-green)
-![NHibernate](https://img.shields.io/badge/NHibernate-5.4-blue)
+![Spring.NET](https://img.shields.io/badge/Spring.NET-3.0.3-green)
+![NHibernate](https://img.shields.io/badge/NHibernate-5.6-blue)
 ![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-purple)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -62,8 +62,12 @@ Upon completing this tutorial, you will be able to:
    - Alternatively, run `nuget restore SpringNet.sln` from the project folder.
 
 3. **Database Configuration**
-   - For SQL Server: Modify the connection string in `SpringNet.Data/hibernate.cfg.xml`.
-   - For SQLite: Use the default settings; the file will be automatically created in `SpringNet.Web/App_Data/springnet.db`.
+   - **For SQLite (Recommended)**: Install the driver package first via NuGet Package Manager Console:
+     ```powershell
+     Install-Package System.Data.SQLite.Core -Version 1.0.118.0
+     ```
+     The DB file will be automatically created at `SpringNet.Web/App_Data/springnet.db`.
+   - **For SQL Server**: Modify the connection string in `SpringNet.Data/hibernate.cfg.xml`.
 
 4. **Start Learning**
    - Begin with `docs/tutorial/00-overview.md`.
@@ -76,55 +80,62 @@ Upon completing this tutorial, you will be able to:
 <details>
 <summary><b>Phase 1: Basic Concepts (Steps 1-3)</b> ⭐</summary>
 
-- [01. Spring.NET Basic Concepts](docs/tutorial/01-springnet-basics_en.md) - Understanding IoC, DI
+- [01. Spring.NET Basic Concepts](docs/tutorial/01-springnet-basics_en.md) - IoC/DI principles, CRUD request flow
 - [02. Deep Dive into Dependency Injection](docs/tutorial/02-dependency-injection_en.md) - Constructor/Property Injection
-- [03. NHibernate Setup](docs/tutorial/03-nhibernate-setup_en.md) - Basic ORM Configuration
+- [03. NHibernate Setup](docs/tutorial/03-nhibernate-setup.md) - Basic ORM Configuration, SQLite/SQL Server *(Korean)*
 
 </details>
 
 <details>
 <summary><b>Phase 2: Bulletin Board System (Steps 4-7)</b> ⭐⭐</summary>
 
-- [04. Domain Model Design](docs/tutorial/04-board-part1-domain_en.md) - Entity Design and Mapping
-- [05. Repository Pattern](docs/tutorial/05-board-part2-repository_en.md) - Data Access Layer
-- [06. Service Layer](docs/tutorial/06-board-part3-service_en.md) - Business Logic Separation
-- [07. MVC Controller & View](docs/tutorial/07-board-part4-mvc_en.md) - Web Presentation
+- [04. Domain Model Design](docs/tutorial/04-board-part1-domain.md) - Entity Design and Mapping *(Korean)*
+- [05. Repository Pattern](docs/tutorial/05-board-part2-repository.md) - Data Access Layer *(Korean)*
+- [06. Service Layer](docs/tutorial/06-board-part3-service.md) - Business Logic Separation *(Korean)*
+- [07. MVC Controller & View](docs/tutorial/07-board-part4-mvc.md) - Web Presentation *(Korean)*
 
 </details>
 
 <details>
 <summary><b>Phase 3: User Management (Steps 8-9)</b> ⭐⭐⭐</summary>
 
-- [08. Authentication](docs/tutorial/08-user-part1-authentication_en.md) - User Registration, Login Implementation
-- [09. Authorization](docs/tutorial/09-user-part2-authorization_en.md) - Permission Management
+- [08. Authentication](docs/tutorial/08-user-part1-authentication.md) - User Registration, Login, UserRepository *(Korean)*
+- [09. Authorization](docs/tutorial/09-user-part2-authorization.md) - Permission Management ⚠️ **Board Entity Breaking Change** *(Korean)*
 
 </details>
 
 <details>
 <summary><b>Phase 4: Shopping Mall System (Steps 10-12)</b> ⭐⭐⭐⭐</summary>
 
-- [10. Product Management](docs/tutorial/10-shopping-part1-products_en.md) - Category, Product CRUD
-- [11. Shopping Cart Functionality](docs/tutorial/11-shopping-part2-cart_en.md) - Shopping Cart Features
-- [12. Order Processing](docs/tutorial/12-shopping-part3-order_en.md) - Order and Payment
+- [10. Product Management](docs/tutorial/10-shopping-part1-products.md) - Category, Product CRUD *(Korean)*
+- [11. Shopping Cart](docs/tutorial/11-shopping-part2-cart.md) - Shopping Cart Features *(Korean)*
+- [12. Order Processing](docs/tutorial/12-shopping-part3-order.md) - Order and Payment *(Korean)*
 
 </details>
 
 <details>
 <summary><b>Phase 5: Advanced Topics (Steps 13-14)</b> ⭐⭐⭐⭐</summary>
 
-- [13. Transaction Management](docs/tutorial/13-transaction-management_en.md) - ACID, Isolation Levels
-- [14. Best Practices](docs/tutorial/14-best-practices_en.md) - Security, Performance Optimization
+- [13. Transaction Management](docs/tutorial/13-transaction-management.md) - ACID, Isolation Levels *(Korean)*
+- [14. Best Practices](docs/tutorial/14-best-practices.md) - Security, Performance Optimization *(Korean)*
 
 </details>
 
 <details open>
 <summary><b>Phase 6: Advanced Practical Skills (Steps 15-19)</b> ⭐⭐⭐⭐⭐</summary>
 
-- [15. NHibernate Advanced Queries](docs/tutorial/15-advanced-nhibernate-queries_en.md) - HQL, LINQ, Criteria
-- [16. Stored Procedure Usage](docs/tutorial/16-stored-procedures_en.md) - How to Use Stored Procedures
-- [17. Session Management](docs/tutorial/17-session-management_en.md) - NHibernate & Web Session
-- [18. Web API Integration](docs/tutorial/18-webapi-integration_en.md) - RESTful API Development
-- [19. Advanced CRUD Patterns](docs/tutorial/19-advanced-crud-patterns_en.md) - UoW, Specification
+- [15. NHibernate Advanced Queries](docs/tutorial/15-advanced-nhibernate-queries.md) - HQL, LINQ, Criteria *(Korean)*
+- [16. Stored Procedure Usage](docs/tutorial/16-stored-procedures.md) - How to Use Stored Procedures *(Korean)*
+- [17. Session Management](docs/tutorial/17-session-management.md) - NHibernate & Web Session *(Korean)*
+- [18. Web API Integration](docs/tutorial/18-webapi-integration.md) - RESTful API Development *(Korean)*
+- [19. Advanced CRUD Patterns](docs/tutorial/19-advanced-crud-patterns.md) - UoW, Specification *(Korean)*
+
+</details>
+
+<details>
+<summary><b>📎 Appendix</b></summary>
+
+- [SQL Scripts](docs/tutorial/appendix-sql-scripts.md) - Full DDL (SQL Server/SQLite), Tutorial 09 migration SQL, sample data
 
 </details>
 
@@ -133,11 +144,12 @@ Upon completing this tutorial, you will be able to:
 ```
 SpringNet/
 │
-├── docs/tutorial/                          # 📚 Learning Documents (20 Tutorials)
-│   ├── 00-overview.md            # Overall Roadmap
-│   ├── 01-springnet-basics.md    # Spring.NET Basics
-│   ├── 02-dependency-injection.md
-│   └── ... (Total 20 files)
+├── docs/tutorial/                          # 📚 Learning Documents (20 Tutorials + Appendix)
+│   ├── 00-overview.md                # Overall Roadmap
+│   ├── 01-springnet-basics.md        # Spring.NET Basics (EN available)
+│   ├── 02-dependency-injection.md    # (EN available)
+│   ├── ... (01~19 total 20 tutorials)
+│   └── appendix-sql-scripts.md       # Appendix: Full DDL & Migration SQL
 │
 ├── SpringNet.Domain/              # 🎯 Domain Layer
 │   └── Entities/                 # Entity Classes (e.g., Board.cs, Reply.cs, User.cs, Product.cs)
@@ -180,7 +192,7 @@ SpringNet/
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | **Spring.NET** | 3.0.0 | IoC/DI Container, AOP, Transaction Management |
-| **NHibernate** | 5.4.0 | ORM (Object-Relational Mapping) |
+| **NHibernate** | 5.6.0 | ORM (Object-Relational Mapping) |
 | **ASP.NET MVC** | 5.2.9 | Web Framework |
 | **ASP.NET Web API** | 5.2.9 | RESTful API (Integrated into existing MVC project) |
 | **.NET Framework** | 4.8 | Runtime |
